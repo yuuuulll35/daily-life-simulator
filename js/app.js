@@ -178,8 +178,9 @@
     const groups = [];
     for (const ev of data.schedule) {
       const last = groups[groups.length - 1];
-      if (last && last.time === ev.time) last.events.push(ev);
-      else groups.push({ time: ev.time, events: [ev] });
+      // 같은 시각끼리 묶는다. 자정을 넘긴 다음 날 같은 시각과 섞이지 않게 누적 분으로 비교한다
+      if (last && last.minutes === ev.minutes) last.events.push(ev);
+      else groups.push({ time: ev.time, minutes: ev.minutes, day: ev.day || 0, events: [ev] });
     }
     const charIndex = new Map(data.characters.map((c, i) => [c.id, i]));
     const n = data.characters.length;
@@ -409,7 +410,7 @@
           : '';
         rows.push(`
           <tr data-group="${gi}" class="${ei === 0 ? 'group-start' : 'group-cont'}">
-            <td class="col-time">${ei === 0 ? g.time : `<span class="same-time">〃</span>`}</td>
+            <td class="col-time">${ei === 0 ? timeLabel(g) : `<span class="same-time">〃</span>`}</td>
             <td class="col-char">${charDot(ch)}${escapeHtml(ch.name)}</td>
             <td class="col-action">${escapeHtml(ev.action)}${say}</td>
           </tr>`);
@@ -566,7 +567,7 @@
       return;
     }
     const g = state.groups[state.index];
-    els.statusTime.textContent = g.time;
+    els.statusTime.innerHTML = timeLabel(g);
     els.statusStep.textContent = `${state.index + 1} / ${state.groups.length}`;
     els.slider.value = String(state.index);
     const pct = state.groups.length > 1 ? (state.index / (state.groups.length - 1)) * 100 : 100;
@@ -608,7 +609,7 @@
     state.index = index;
     if (useAnim && gap > 0 && (gap >= 60 || jumps)) {
       const token = state.animToken;
-      await showTransition(`⏩ ${formatGap(gap)} 후 · ${state.groups[index].time}`, 1100 / state.speed);
+      await showTransition(`⏩ ${formatGap(gap)} 후 · ${state.groups[index].day ? "다음 날 " : ""}${state.groups[index].time}`, 1100 / state.speed);
       if (token !== state.animToken) return;
     }
     updateTimetableHighlight();
@@ -944,15 +945,18 @@
       <span class="part-state">복사</span>
     </button>`).join('');
 
-  /** 붙여넣은 답에 들어 있는 시각(분) 목록 */
+  /** 붙여넣은 답에 들어 있는 시각(분) 목록. 자정을 넘긴 새벽(23:30 다음 00:15)은 다음 날로 센다 */
   function pastedMinutes() {
-    const out = [];
-    for (const line of P.sched.input.value.split(/\r?\n/)) {
+    const items = [];
+    P.sched.input.value.split(/\r?\n/).forEach((line, i) => {
       const m = line.match(/^\s*(?:[-•*·]\s*)?(\d{1,2}):([0-5]\d)\s*\|/);
-      if (m) out.push(Number(m[1]) * 60 + Number(m[2]));
-    }
-    return out;
+      if (m) items.push({ line: i, minutes: Number(m[1]) * 60 + Number(m[2]) });
+    });
+    return OOCParser.rollOverMidnight(items).map((it) => it.minutes);
   }
+
+  /** 시각 표시: 다음 날이면 "+1" 표시를 붙인다 */
+  const timeLabel = (g) => `${g.time}${g.day ? `<span class="next-day" title="다음 날">+${g.day}</span>` : ''}`;
 
   /** 구간 버튼 상태: 집이 없으면 끔, 그 구간 시각이 붙여넣어져 있으면 완료 표시 */
   function updateParts() {

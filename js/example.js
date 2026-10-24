@@ -87,7 +87,8 @@ const HOUSE_TEMPLATE = `[OOC: 잠시 역할극 중단. 새로운 에피소드. �
 const DAY_PARTS = [
   { key: 'am', label: '오전', range: '~12시', from: 0, to: 12 * 60, span: '기상부터 11:59까지' },
   { key: 'pm', label: '오후', range: '12~18시', from: 12 * 60, to: 18 * 60, span: '12:00부터 17:59까지' },
-  { key: 'eve', label: '저녁', range: '18시~', from: 18 * 60, to: 24 * 60, span: '18:00부터 취침까지' },
+  // 저녁은 자정을 넘긴 새벽(다음 날 00:40 취침 등)까지 포함한다
+  { key: 'eve', label: '저녁', range: '18시~', from: 18 * 60, to: 48 * 60, span: '18:00부터 취침까지' },
 ];
 
 /**

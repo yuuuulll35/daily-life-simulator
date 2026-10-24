@@ -62,6 +62,26 @@ const OOCParser = (() => {
 
   const floorLabel = (f) => (f < 0 ? `지하 ${-f}층` : `${f}층`);
 
+  const DAY = 24 * 60;
+  const ROLLOVER_GAP = 6 * 60; // 이만큼 넘게 시각이 뒤로 가면 자정을 넘긴 것으로 본다
+
+  /**
+   * 적힌 순서(줄 번호)대로 보며 자정을 넘긴 줄에 하루를 더한다.
+   * ev.minutes는 첫날 0시 기준 누적 분, ev.day는 0(첫날)/1(다음 날)…
+   * items: { line, minutes }가 있는 배열 (다른 곳에서도 같은 규칙을 쓰도록 공개)
+   */
+  function rollOverMidnight(items) {
+    let offset = 0;
+    let last = null;
+    for (const ev of [...items].sort((a, b) => a.line - b.line)) {
+      if (last !== null && ev.minutes + offset < last - ROLLOVER_GAP) offset += DAY;
+      ev.minutes += offset;
+      ev.day = offset / DAY;
+      last = ev.minutes;
+    }
+    return items;
+  }
+
   /* 채팅 플랫폼이 답 끝에 붙이는 문구 */
   const WATERMARK_RE = /\s*이 대화는 AI로 만들어진 가상의 대화입니다\.?/g;
   const ALL_SECTIONS = [...HOUSE_SECTIONS, ...SCHEDULE_SECTIONS];
@@ -515,13 +535,17 @@ const OOCParser = (() => {
       else { ev.room = route[0]; ev.route = null; }
     }
 
+    // 자정 넘김: AI가 적은 순서대로 보며 시각이 크게(6시간 넘게) 뒤로 가면 다음 날로 본다
+    // (예: 23:30 다음의 00:15는 아침이 아니라 다음 날 새벽). 조금 뒤로 가는 건 순서만 바로잡는다
+    rollOverMidnight(schedule);
+
     // 시각순 정렬(같은 시각은 입력 순서 유지) 후 위치 연속성: 직전 위치와 시작 공간이 다르면 경로를 앞에 이어 붙인다
     schedule.sort((x, y) => x.minutes - y.minutes || x.line - y.line);
     const pos = new Map();
     const seenSlot = new Map();
     for (const ev of schedule) {
       if (ev.invalid) continue;
-      const slot = `${ev.time}|${ev.charId}`;
+      const slot = `${ev.minutes}|${ev.charId}`;
       if (seenSlot.has(slot)) {
         addWarning(ev.line, `${ev.time} ${ev.charId}`, `${ev.charId}의 ${ev.time} 줄이 ${seenSlot.get(slot)}줄에도 있습니다. 나중 줄을 씁니다.`, '');
       }
@@ -551,5 +575,5 @@ const OOCParser = (() => {
     return { characters, schedule, errors, warnings };
   }
 
-  return { parseHouse, parseSchedule, shortestPath, connKey };
+  return { parseHouse, parseSchedule, shortestPath, connKey, rollOverMidnight };
 })();
