@@ -2,6 +2,8 @@
 
 집 구조 OOC를 붙여넣어 지도를 먼저 만들고, 이어서 동선 OOC를 붙여넣으면 캐릭터의 하루 동선을 시간 순서대로 보여 주는 정적 웹앱입니다. 서버·API·빌드 도구 없이 HTML/CSS/JavaScript만으로 동작합니다.
 
+**바로 써 보기: https://yuuuulll35.github.io/daily-life-simulator/** (처음 화면의 **예시로 보기**를 누르면 예시 집과 하루가 재생됩니다)
+
 ## 실행 방법
 
 1. `index.html`을 브라우저에서 바로 열어도 됩니다 (파일 더블클릭).
@@ -134,7 +136,7 @@ js/app.js         상태 관리, 시간표, 재생 제어, 확대/축소
 
 정적 파일만 있으므로 어떤 정적 호스팅에도 그대로 올릴 수 있습니다.
 
-- **GitHub Pages**: 저장소에 이 폴더 내용을 올리고 Settings → Pages에서 브랜치와 루트(또는 `/docs`)를 지정합니다.
+- **GitHub Pages**: 지금은 `yuuuulll35/daily-life-simulator` 저장소의 `main` 브랜치 루트로 배포되어 있어, `main`에 푸시하면 1~2분 뒤 페이지에 반영됩니다. 다른 저장소에 올릴 때는 Settings → Pages에서 브랜치와 루트(또는 `/docs`)를 지정합니다.
 - **Cloudflare Pages / Netlify / Vercel**: 빌드 명령 없이 출력 디렉터리를 이 폴더로 지정합니다.
 
 ## 구현 범위
