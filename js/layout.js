@@ -12,6 +12,8 @@
  *  5. 층마다 따로 배치해 층 패널로 나란히 놓고, 층을 오가는 연결은
  *     양쪽 방에 계단 칸을 두어 그 사이를 순간 이동한다.
  *  방에 위치 단서(북/남/동/서)가 있으면 중심 방 기준 그 방향 벽을 우선한다.
+ *  중심 방에 직접 붙지 않았지만 중심 방 이웃 둘 이상에 연결된 방(두 침실 사이 연결실 등)은
+ *  그 이웃들과 같은 벽에 나란히 놓아 사이에 끼운다. 단, 이웃들이 방위상 다른 벽이면 끼우지 않는다.
  * 연결 정보만으로 실제 도면을 복원할 수는 없으므로 근사 배치다.
  * =========================================================== */
 const HouseLayout = (() => {
@@ -204,6 +206,31 @@ const HouseLayout = (() => {
         children.get(u).push(v);
         queue.push(v);
       }
+    }
+
+    // 사이에 낀 방: 중심 방에는 안 붙었지만 중심 방 이웃 두 곳 이상에 연결된 방(예: 윤의 방-연결실-지아의 방)은
+    // 중심 방 이웃으로 옮겨서, 서로 연결된 이웃끼리 한 벽에 나란히 놓는 규칙으로 그 둘 사이에 끼워 넣는다
+    const hubNbs = new Set(children.get(hub));
+    const hubP = info.get(hub).position || { x: 0, y: 0 };
+    const sideOf = (v) => {
+      const q = info.get(v).position;
+      if (!q) return null;
+      const dx = q.x - hubP.x;
+      const dy = q.y - hubP.y;
+      if (!dx && !dy) return null;
+      return Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'bottom' : 'top');
+    };
+    for (const n of comp) {
+      if (n === hub || hubNbs.has(n)) continue;
+      const linked = adj.get(n).filter((v) => hubNbs.has(v));
+      if (linked.length < 2) continue;
+      // 위치 단서상 서로 다른 벽(북쪽 방과 남쪽 방)에 갈 이웃끼리는 묶지 않는다: 방위 배치를 지키고 기존처럼 바깥 통로
+      const sides = new Set(linked.map(sideOf).filter(Boolean));
+      if (sides.size > 1) continue;
+      const p = parent.get(n);
+      children.set(p, children.get(p).filter((c) => c !== n));
+      parent.set(n, hub);
+      children.get(hub).push(n);
     }
 
     // 각 방이 벽을 따라 차지해야 하는 길이(자식들이 바깥에 나란히 붙을 수 있게)
